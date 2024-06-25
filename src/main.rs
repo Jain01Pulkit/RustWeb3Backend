@@ -11,10 +11,9 @@ use events::{
     cron_util,
 };
 use serde::{Deserialize, Serialize};
-use service::userservice::MongoRepo;
 use tokio::runtime::Runtime;
-mod service;
-mod models;
+// mod service;
+// mod models;
 #[derive(Serialize, Deserialize, Debug)]
 struct LogData {
     topics: String,
@@ -40,7 +39,7 @@ struct LogWrapper {
 }
 
 fn main() {
-    let db = MongoRepo::init();
+    // let db = MongoRepo::init();
     cron_util::create_cronjob_with_schedule(CRON_EXPRESSION_5_SEC, produce_joke);
 }
 fn produce_joke() {
