@@ -3059,7 +3059,6 @@ dependencies = [
  "rustls 0.21.12",
  "rustls-pemfile 1.0.4",
  "serde",
- "serde_bytes",
  "serde_with",
  "sha-1",
  "sha2",

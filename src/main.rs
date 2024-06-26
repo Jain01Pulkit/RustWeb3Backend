@@ -1,4 +1,5 @@
 use std::{error::Error, str::FromStr};
+
 use alloy::{
     primitives::{address, Bytes},
     providers::{Provider, ProviderBuilder},
@@ -6,15 +7,12 @@ use alloy::{
     sol,
 };
 use ethereum_types::H160;
-use events::{
-    consts::CRON_EXPRESSION_5_SEC,
-    cron_util,
-};
+use events::{consts::CRON_EXPRESSION_5_SEC, cron_util};
 use serde::{Deserialize, Serialize};
 use service::userservice::MongoRepo;
 use tokio::runtime::Runtime;
-mod service;
 mod models;
+mod service;
 #[derive(Serialize, Deserialize, Debug)]
 struct LogData {
     topics: String,
@@ -40,13 +38,20 @@ struct LogWrapper {
 }
 
 fn main() {
-    let db = MongoRepo::init();
     cron_util::create_cronjob_with_schedule(CRON_EXPRESSION_5_SEC, produce_joke);
 }
 fn produce_joke() {
     let rt = Runtime::new().unwrap();
+    let db = MongoRepo::init();
     rt.block_on(async {
-        match fetchevents().await {
+        match MongoRepo::get_events(
+            &db,
+            "Transfer",
+            37786304,
+            "0xfC0b3e6D09566bA2Bb5F069Da59390EA001904Fb",
+        )
+        .await
+        {
             Ok(joke) => println!("{:?}", joke),
             Err(e) => println!("Error: {}", e),
         }

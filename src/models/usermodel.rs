@@ -23,8 +23,9 @@ pub struct Events {
     pub removed: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BlockInfo {
     pub address:String,
     pub event_name: String,
-    pub block_number: Number,
+    pub block_number: u64,
 }
