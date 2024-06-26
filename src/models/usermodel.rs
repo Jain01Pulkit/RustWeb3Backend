@@ -1,14 +1,14 @@
-use alloy::{primitives::{Address, Bytes, FixedBytes}, signers::local::yubihsm::device::SerialNumber};
-use mongodb::bson::oid::ObjectId;
+use alloy::primitives::Bytes;
+use ethereum_types::H160;
 use serde::{Serialize, Deserialize};
 #[derive(Debug, Serialize, Deserialize)]
-struct PrimitiveData{
-    address:Address,
-    data:LogData
+pub struct PrimitiveData{
+    pub address:H160,
+    pub data:LogData
 }
 #[derive(Debug, Serialize, Deserialize)]
-struct LogData{
-    topics: Vec<FixedBytes<32>>,
+pub struct LogData{
+    pub topics: String,
     pub data: Bytes
 }
 #[derive(Debug, Serialize, Deserialize)]

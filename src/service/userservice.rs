@@ -1,13 +1,14 @@
 use std::{env, error::Error, str::FromStr};
 extern crate dotenv;
-use crate::{models::usermodel::BlockInfo, LogData, LogWrapper, PrimitiveData};
+use crate::models::usermodel::BlockInfo;
+use crate::models::usermodel::{Events, LogData, PrimitiveData};
 use alloy::providers::Provider;
 use alloy::{primitives::address, providers::ProviderBuilder, rpc::types::Filter, sol};
 use dotenv::dotenv;
 use ethereum_types::H160;
 use mongodb::{
     bson::doc,
-    results::{DeleteResult, InsertManyResult, InsertOneResult, UpdateResult},
+    results::InsertManyResult,
     sync::{Client, Collection},
 };
 sol!(
@@ -18,7 +19,7 @@ sol!(
 );
 
 pub struct MongoRepo {
-    col: Collection<alloy::rpc::types::Log>,
+    col: Collection<Events>,
     col_block: Collection<BlockInfo>,
 }
 
@@ -31,28 +32,39 @@ impl MongoRepo {
         };
         let client = Client::with_uri_str(uri).unwrap();
         let db = client.database("rustDB");
-        let col: Collection<alloy::rpc::types::Log> = db.collection("User");
+        let col: Collection<Events> = db.collection("User");
         let col_block: Collection<BlockInfo> = db.collection("Block");
 
         MongoRepo { col, col_block }
     }
 
-    // pub fn create_events(&self, new_user: Vec<alloy::rpc::types::Log>) -> Result<InsertManyResult, Error> {
-
-    //     let user = self
-    //         .col
-    //         .insert_many(&new_user, None)
-    //         .ok()
-    //         .expect("Error creating user");
-    //     Ok(user)
-    // }
+    pub fn insert_events(
+        &self,
+        events: Vec<Events>,
+        end_block: i64,
+    ) -> Result<Option<InsertManyResult>, Box<dyn Error>> {
+        print!("{:?}kkkkkkkkkkkkkkkkkkkk", events);
+        if !events.is_empty() {
+            let user = self
+                .col
+                .insert_many(&events, None)
+                .ok()
+                .expect("Error creating user");
+            Ok(Some(user))
+        } else {
+            let filter = doc! { "event_name": "Transfer" };
+            let update = doc! { "$set": { "block_number": end_block as i64} };
+            self.col_block.update_one(filter, update, None)?;
+            Ok(None)
+        }
+    }
 
     pub async fn get_events(
         &self,
         event_name: &str,
         contract_start_block: u64,
         contract_address: &str,
-    ) -> Result<(Vec<LogWrapper>, u64), Box<dyn Error>> {
+    ) -> Result<(Vec<Events>, u64), Box<dyn Error>> {
         // let collection = db.collection::<BlockInfo>("blockInfo");
 
         let filter = doc! { "event_name": "Transfer" };
@@ -76,7 +88,7 @@ impl MongoRepo {
         // Create a filter to get all logs from the latest block.
         let current_block = provider.get_block_number().await?;
         let mut transformed_logs = Vec::new();
-        let end_block=12;
+        let end_block = 12;
         if current_block >= start_block {
             let end_block = if start_block + 1000 > current_block {
                 current_block
@@ -91,7 +103,7 @@ impl MongoRepo {
                 .to_block(end_block);
             let logs = provider.get_logs(&filter).await?;
             for log in logs {
-                let log_wrapper = LogWrapper {
+                let log_wrapper = Events {
                     inner: PrimitiveData {
                         address: H160::from_str(&log.inner.address.to_string())?,
                         data: LogData {
@@ -111,13 +123,13 @@ impl MongoRepo {
             }
             print!("{},{}", event_name, end_block);
             // Ok(transformed_logs)
-            let filter = doc! { "event_name": event_name };
-            let update = doc! { "$set": { "block_number": end_block as i64} };
-            self.col_block.update_one(filter, update, None)?;
+            // let filter = doc! { "event_name": event_name };
+            // let update = doc! { "$set": { "block_number": end_block as i64} };
+            // self.col_block.update_one(filter, update, None)?;
             Ok((transformed_logs, end_block))
         } else {
             println!("Waiting for blocks to update");
-            Ok((transformed_logs,end_block))
+            Ok((transformed_logs, end_block))
         }
     }
 }
